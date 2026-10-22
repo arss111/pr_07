@@ -1,0 +1,960 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TCO: стоимость владения ИТ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<style>
+/* Layout: Neo-Grid Bold — a fixed 16:9 stage (100rem × 56.25rem, rem scales with the viewport) over a blueprint grid; on phones and portrait screens each slide becomes a scrolling column. */
+:root{
+  --bg:#05070c;
+  --bg-2:#0a0e17;
+  --panel:#0d1320;
+  --panel-2:#111a2b;
+  --line:rgba(110,150,215,.11);
+  --line-2:rgba(110,150,215,.24);
+  --fg:#e9eef7;
+  --muted:#8693aa;
+  --dim:#56627a;
+  --cyan:#2ef2ff;
+  --violet:#9a7bff;
+  --pink:#ff3d9a;
+  --amber:#ffb020;
+  --mint:#5cf2b0;
+  --cyan-soft:rgba(46,242,255,.12);
+  --pink-soft:rgba(255,61,154,.12);
+  --amber-soft:rgba(255,176,32,.12);
+  --glow-cyan:0 0 1.2rem rgba(46,242,255,.45);
+  --glow-pink:0 0 1.2rem rgba(255,61,154,.45);
+  --f-display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --f-body:"Golos Text","Segoe UI",system-ui,-apple-system,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  color-scheme:dark;
+}
+@property --sweep{syntax:"<angle>";inherits:false;initial-value:0deg}
+
+html,body{height:100%}
+html{font-size:calc(min(100vw, 177.78vh) / 100)}
+body{
+  margin:0;overflow:hidden;background:var(--bg);color:var(--fg);
+  font-family:var(--f-body);font-size:1.2rem;line-height:1.45;
+  display:grid;place-items:center;
+  -webkit-font-smoothing:antialiased;
+}
+body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(60rem 40rem at 85% 10%, rgba(154,123,255,.10), transparent 60%),
+    radial-gradient(50rem 35rem at 5% 95%, rgba(46,242,255,.08), transparent 60%);
+}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;border-radius:.4rem}
+
+/* ---------- Stage ---------- */
+.stage{
+  position:relative;z-index:1;width:100rem;height:56.25rem;overflow:hidden;
+  background:
+    linear-gradient(var(--line) 1px, transparent 1px) 0 0/4rem 4rem,
+    linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0/4rem 4rem,
+    var(--bg-2);
+  border:1px solid var(--line);
+}
+.stage::before{ /* corner crosshairs */
+  content:"";position:absolute;inset:1.4rem;pointer-events:none;z-index:2;
+  background:
+    linear-gradient(var(--line-2),var(--line-2)) left top/1.4rem 1px no-repeat,
+    linear-gradient(var(--line-2),var(--line-2)) left top/1px 1.4rem no-repeat,
+    linear-gradient(var(--line-2),var(--line-2)) right top/1.4rem 1px no-repeat,
+    linear-gradient(var(--line-2),var(--line-2)) right top/1px 1.4rem no-repeat,
+    linear-gradient(var(--line-2),var(--line-2)) left bottom/1.4rem 1px no-repeat,
+    linear-gradient(var(--line-2),var(--line-2)) left bottom/1px 1.4rem no-repeat,
+    linear-gradient(var(--line-2),var(--line-2)) right bottom/1.4rem 1px no-repeat,
+    linear-gradient(var(--line-2),var(--line-2)) right bottom/1px 1.4rem no-repeat;
+}
+
+.progress{position:absolute;top:0;left:0;right:0;height:.3rem;background:rgba(255,255,255,.04);z-index:6}
+.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink));box-shadow:var(--glow-cyan);transition:width .6s cubic-bezier(.2,.7,.2,1)}
+
+.hud{
+  position:absolute;top:2.1rem;left:max(16px, 3.4rem, env(safe-area-inset-left,0px));right:max(16px, 3.4rem, env(safe-area-inset-right,0px));
+  display:flex;justify-content:space-between;align-items:center;z-index:5;
+  font-family:var(--f-mono);font-size:.82rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);pointer-events:none;
+}
+.hud b{color:var(--cyan);font-weight:600}
+.hud .dotline{display:flex;gap:.6rem;align-items:center}
+.hud .dotline::before{content:"";width:.5rem;height:.5rem;border-radius:50%;background:var(--pink);box-shadow:var(--glow-pink)}
+
+/* ---------- Slides ---------- */
+.slides{position:absolute;inset:0}
+.slide{
+  position:absolute;inset:0;display:flex;flex-direction:column;gap:2rem;
+  padding-block:5.6rem 7rem;
+  padding-left:max(16px, 6rem, env(safe-area-inset-left,0px));
+  padding-right:max(16px, 6rem, env(safe-area-inset-right,0px));
+  opacity:0;visibility:hidden;transform:translateX(5%) scale(.985);
+  transition:opacity .55s ease, transform .75s cubic-bezier(.2,.7,.2,1), visibility 0s linear .75s;
+}
+.slide.past{transform:translateX(-5%) scale(.985)}
+.slide.active{opacity:1;visibility:visible;transform:none;transition:opacity .55s ease, transform .75s cubic-bezier(.2,.7,.2,1), visibility 0s}
+.slide.active .r{animation:rise .7s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0) * 110ms + 180ms)}
+@keyframes rise{from{opacity:0;transform:translateY(1.6rem)}}
+
+.eyebrow{margin:0;font-family:var(--f-mono);font-size:.9rem;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);display:flex;gap:.8rem;align-items:center}
+.eyebrow::before{content:"";width:2.2rem;height:1px;background:var(--cyan);box-shadow:var(--glow-cyan)}
+h1,h2,h3{margin:0;text-wrap:balance}
+h2{font-family:var(--f-display);font-weight:700;font-size:3rem;line-height:1.08;letter-spacing:-.01em}
+h2 em{font-style:normal;color:var(--cyan);text-shadow:var(--glow-cyan)}
+h2 em.pk{color:var(--pink);text-shadow:var(--glow-pink)}
+h3{font-family:var(--f-body);font-weight:700;font-size:1.3rem;line-height:1.2}
+p{margin:0}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-mono)}
+.cyan{color:var(--cyan)}.pink{color:var(--pink)}.amber{color:var(--amber)}.violet{color:var(--violet)}.mint{color:var(--mint)}
+.head{display:flex;flex-direction:column;gap:1rem;max-width:70rem}
+.body{flex:1;min-height:0;display:grid;gap:2rem}
+
+.ico{width:1.6rem;height:1.6rem;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ibox{width:3.2rem;height:3.2rem;border-radius:.8rem;display:grid;place-items:center;border:1px solid currentColor;background:color-mix(in srgb, currentColor 10%, transparent);flex:none}
+
+.card{background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line-2);border-radius:1rem;padding:1.5rem;min-width:0}
+
+/* ---------- 1. Title ---------- */
+.s-title .title-grid{flex:1;display:grid;grid-template-columns:1.35fr 1fr;gap:4rem;align-items:center}
+.title-main{display:flex;flex-direction:column;gap:1.8rem;min-width:0}
+.tco{
+  font-family:var(--f-display);font-weight:800;font-size:14rem;line-height:.85;letter-spacing:-.04em;
+  background:linear-gradient(100deg,var(--cyan) 0%,var(--violet) 55%,var(--pink) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 1.6rem rgba(46,242,255,.35));position:relative;display:inline-block;
+}
+.tco-wrap{position:relative;display:inline-block}
+.tco-wrap::after{
+  content:"TCO";position:absolute;left:.9rem;top:.9rem;z-index:-1;
+  font-family:var(--f-display);font-weight:800;font-size:14rem;line-height:.85;letter-spacing:-.04em;
+  color:transparent;-webkit-text-stroke:1px var(--line-2);
+}
+.lead{font-size:2rem;line-height:1.25;font-weight:500;max-width:40rem;text-wrap:balance}
+.chips{display:flex;flex-wrap:wrap;gap:.7rem}
+.chip{font-family:var(--f-mono);font-size:.85rem;letter-spacing:.06em;padding:.55rem .95rem;border:1px solid var(--line-2);border-radius:999px;color:var(--muted);background:rgba(255,255,255,.02)}
+.title-side{display:flex;flex-direction:column;gap:1.4rem;min-width:0}
+.stat-big{padding:2rem;border:1px solid rgba(46,242,255,.35);border-radius:1.2rem;background:linear-gradient(160deg,var(--cyan-soft),transparent 70%);display:flex;flex-direction:column;gap:.7rem}
+.stat-big .num{font-family:var(--f-mono);font-weight:700;font-size:4.6rem;line-height:1;text-shadow:var(--glow-cyan);font-variant-numeric:tabular-nums}
+.stat-big small{font-family:var(--f-mono);font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.formula-mini{font-family:var(--f-mono);font-size:1.05rem;padding:1rem 1.3rem;border-left:2px solid var(--pink);background:var(--pink-soft);border-radius:0 .6rem .6rem 0;overflow-wrap:anywhere}
+.author{display:flex;flex-direction:column;gap:.25rem}
+.label{font-family:var(--f-mono);font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.author strong{font-size:1.35rem;font-weight:600}
+
+/* ---------- 2. Problem / iceberg ---------- */
+.s-problem .body{grid-template-columns:1fr 1.05fr;align-items:stretch}
+.pain-list{display:flex;flex-direction:column;gap:1rem;justify-content:center}
+.pain{display:flex;gap:1.2rem;align-items:flex-start;padding:1.3rem 1.4rem}
+.pain p{color:var(--muted);font-size:1.08rem;margin-top:.3rem}
+.iceberg{position:relative;min-height:0;border:1px solid var(--line-2);border-radius:1.2rem;overflow:hidden;background:var(--panel)}
+.iceberg svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.ice-tag{position:absolute;font-family:var(--f-mono);font-size:.85rem;display:flex;flex-direction:column;gap:.2rem;max-width:15rem}
+.ice-tag b{font-size:2.4rem;line-height:1;font-weight:700}
+.ice-tag span{color:var(--muted);letter-spacing:.02em}
+.ice-tag.top{top:1.6rem;left:1.6rem}
+.ice-tag.bottom{position:static;margin-bottom:.5rem}
+.ice-water{position:absolute;left:1.6rem;top:calc(27% - 1.6rem);font-family:var(--f-mono);font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
+.ice-list{position:absolute;left:1.6rem;bottom:1.6rem;display:flex;flex-direction:column;gap:.35rem;font-size:.95rem;color:var(--fg)}
+.ice-list > span::before{content:"▸ ";color:var(--pink)}
+
+/* ---------- 3. Definition ---------- */
+.s-def .body{grid-template-rows:auto auto 1fr;gap:1.8rem}
+.formula{display:flex;flex-wrap:wrap;align-items:stretch;gap:.9rem}
+.f-term{display:flex;flex-direction:column;justify-content:center;gap:.4rem;padding:1.1rem 1.4rem;border-radius:.9rem;border:1px solid currentColor;background:color-mix(in srgb, currentColor 9%, transparent);min-width:0}
+.f-term b{font-family:var(--f-mono);font-size:2rem;line-height:1;font-weight:700}
+.f-term span{font-size:.92rem;color:var(--muted)}
+.f-op{font-family:var(--f-mono);font-size:2.2rem;color:var(--dim);display:grid;place-items:center;padding:0 .2rem}
+.def-note{display:flex;gap:2.4rem;flex-wrap:wrap;color:var(--muted);font-size:1.08rem}
+.def-note strong{color:var(--fg)}
+.timeline{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:1.2rem;align-self:end}
+.timeline::before{content:"";position:absolute;left:0;right:0;top:1.15rem;height:2px;background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink));opacity:.55}
+.tl{position:relative;display:flex;flex-direction:column;gap:.6rem;padding-top:3.2rem;min-width:0}
+.tl::before{content:"";position:absolute;top:.45rem;left:0;width:1.4rem;height:1.4rem;border-radius:50%;background:var(--bg-2);border:2px solid var(--cyan);box-shadow:var(--glow-cyan)}
+.tl.hot::before{border-color:var(--pink);box-shadow:var(--glow-pink);background:var(--pink)}
+.tl .when{font-family:var(--f-mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan)}
+.tl.hot .when{color:var(--pink)}
+.tl p{font-size:.98rem;color:var(--muted)}
+
+/* ---------- 4. Structure ---------- */
+.s-struct .body{grid-template-columns:auto 1fr;gap:4rem;align-items:center}
+.donut-wrap{position:relative;width:27rem;height:27rem;max-width:100%}
+.donut{
+  --sweep:360deg;position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(var(--cyan) 0 27%, var(--violet) 0 45%, #4d8dff 0 60%, var(--mint) 0 71%, #7fa3c9 0 78%, var(--pink) 0 90%, var(--amber) 0 100%);
+  -webkit-mask:conic-gradient(#000 var(--sweep), transparent 0);mask:conic-gradient(#000 var(--sweep), transparent 0);
+  filter:drop-shadow(0 0 1.4rem rgba(154,123,255,.35));
+}
+.slide.active .donut{animation:sweep 1.4s .35s cubic-bezier(.3,.6,.2,1) both}
+@keyframes sweep{from{--sweep:0deg}to{--sweep:360deg}}
+.donut-hole{position:absolute;inset:18%;border-radius:50%;background:var(--bg-2);border:1px solid var(--line-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3rem;text-align:center}
+.donut-hole b{font-family:var(--f-mono);font-size:3.4rem;line-height:1}
+.donut-hole span{font-size:.95rem;color:var(--muted);max-width:11rem}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:2.2rem;min-width:0}
+.lg-group{display:flex;flex-direction:column;gap:1rem;min-width:0}
+.lg-head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line-2);padding-bottom:.7rem;gap:1rem}
+.lg-head h3{font-size:1.2rem}
+.lg-head b{font-family:var(--f-mono);font-size:1.8rem}
+.lg-row{display:grid;grid-template-columns:1fr auto;gap:.35rem 1rem;align-items:center}
+.lg-row .nm{display:flex;align-items:center;gap:.65rem;font-size:1.05rem}
+.lg-row .nm::before{content:"";width:.75rem;height:.75rem;border-radius:.2rem;background:var(--c);box-shadow:0 0 .6rem var(--c);flex:none}
+.lg-row .pc{font-family:var(--f-mono);font-weight:600;font-variant-numeric:tabular-nums}
+.lg-row .bar{grid-column:1/-1;height:.4rem;border-radius:1rem;background:rgba(255,255,255,.05);overflow:hidden}
+.lg-row .bar i{display:block;height:100%;width:var(--w);background:var(--c);border-radius:inherit;transform-origin:left}
+.slide.active .lg-row .bar i{animation:grow 1s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0) * 110ms + 400ms)}
+@keyframes grow{from{transform:scaleX(0)}}
+.lg-note{grid-column:1/-1;font-size:.9rem;color:var(--dim);font-family:var(--f-mono)}
+
+/* ---------- 5. Hidden costs ---------- */
+.s-hidden .body{grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:1.2rem}
+.hc{display:flex;flex-direction:column;gap:.75rem;padding:1.35rem;transition:border-color .25s, transform .25s, box-shadow .25s}
+.hc:hover{border-color:var(--c);transform:translateY(-.25rem);box-shadow:0 0 2rem color-mix(in srgb, var(--c) 22%, transparent)}
+.hc .top{display:flex;justify-content:space-between;align-items:flex-start;gap:.8rem;color:var(--c)}
+.hc .metric{font-family:var(--f-mono);font-weight:700;font-size:1.7rem;line-height:1;color:var(--c);text-shadow:0 0 1rem color-mix(in srgb, var(--c) 55%, transparent);text-align:right}
+.hc .tag{font-family:var(--f-mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--c);border:1px solid color-mix(in srgb, var(--c) 45%, transparent);padding:.3rem .55rem;border-radius:.4rem;white-space:nowrap}
+.hc p{font-size:.98rem;color:var(--muted);line-height:1.4}
+.hc small{margin-top:auto;font-family:var(--f-mono);font-size:.72rem;color:var(--dim);letter-spacing:.04em}
+
+/* ---------- 6. CAPEX vs OPEX ---------- */
+.s-capex .body{grid-template-rows:auto 1fr auto;gap:1.2rem}
+.vs-head{display:grid;grid-template-columns:13rem 1fr 1fr;gap:1.2rem;align-items:stretch}
+.vs-col{display:flex;gap:1.2rem;align-items:center;padding:1.2rem 1.4rem;border-radius:1rem;border:1px solid currentColor;background:color-mix(in srgb, currentColor 8%, transparent);min-width:0}
+.vs-col h3{font-family:var(--f-display);font-size:1.9rem;letter-spacing:.02em}
+.vs-col p{color:var(--muted);font-size:.98rem}
+.vs-col .spark{margin-left:auto;display:flex;align-items:flex-end;gap:.3rem;height:3.4rem}
+.vs-col .spark i{width:.75rem;background:currentColor;border-radius:.15rem .15rem 0 0;height:var(--h);opacity:.9;box-shadow:0 0 .6rem currentColor;transform-origin:bottom}
+.slide.active .spark i{animation:growY .8s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--k) * 90ms + 600ms)}
+@keyframes growY{from{transform:scaleY(0)}}
+.vs-badge{display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:2.2rem;color:var(--fg);border:1px dashed var(--line-2);border-radius:1rem}
+.vs-table{display:flex;flex-direction:column;border:1px solid var(--line-2);border-radius:1rem;overflow:hidden;min-height:0}
+.vs-row{display:grid;grid-template-columns:13rem 1fr 1fr;gap:1.2rem;padding:.85rem 1.4rem;border-top:1px solid var(--line);align-items:center;font-size:1.02rem;flex:1}
+.vs-row:first-child{border-top:0}
+.vs-row:nth-child(odd){background:rgba(255,255,255,.015)}
+.vs-row > span:first-child{font-family:var(--f-mono);font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.vs-row > span{min-width:0}
+.vs-foot{display:flex;gap:1rem;align-items:center;padding:1rem 1.4rem;border-radius:.8rem;background:var(--cyan-soft);border:1px solid rgba(46,242,255,.3);font-size:1.08rem}
+.vs-foot .ico{color:var(--cyan)}
+
+/* ---------- 7. Calculator ---------- */
+.s-calc{gap:1.4rem}
+.s-calc h2{font-size:2.5rem}
+.s-calc .body{grid-template-columns:24rem 1fr;gap:2rem}
+.controls{display:flex;flex-direction:column;gap:1.05rem;padding:1.4rem}
+.ctl{display:flex;flex-direction:column;gap:.45rem}
+.ctl label{display:flex;justify-content:space-between;gap:1rem;font-size:.95rem;color:var(--muted);align-items:baseline}
+.ctl label output{font-family:var(--f-mono);font-weight:700;color:var(--fg);font-size:1rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ctl .grp{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:1.4rem;background:transparent;cursor:pointer;--c:var(--cyan)}
+input[type=range]::-webkit-slider-runnable-track{height:.3rem;border-radius:1rem;background:linear-gradient(90deg,var(--c) var(--fill,50%),rgba(255,255,255,.1) var(--fill,50%))}
+input[type=range]::-moz-range-track{height:.3rem;border-radius:1rem;background:rgba(255,255,255,.1)}
+input[type=range]::-moz-range-progress{height:.3rem;border-radius:1rem;background:var(--c)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:1.1rem;height:1.1rem;margin-top:-.4rem;border-radius:50%;background:var(--bg);border:2px solid var(--c);box-shadow:0 0 .7rem var(--c)}
+input[type=range]::-moz-range-thumb{width:1rem;height:1rem;border-radius:50%;background:var(--bg);border:2px solid var(--c);box-shadow:0 0 .7rem var(--c)}
+.assume{font-size:.8rem;color:var(--dim);font-family:var(--f-mono);line-height:1.4;margin-top:auto}
+.result{display:flex;flex-direction:column;gap:1rem;min-width:0;min-height:0}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:.9rem}
+.kpi{padding:.95rem 1.1rem;border-radius:.8rem;border:1px solid var(--line-2);background:var(--panel);display:flex;flex-direction:column;gap:.3rem;min-width:0}
+.kpi span{font-size:.82rem;color:var(--muted)}
+.kpi b{font-family:var(--f-mono);font-size:1.6rem;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chart-card{flex:1;min-height:0;padding:1rem 1.2rem .6rem;display:flex;flex-direction:column;gap:.4rem}
+.chart-legend{display:flex;gap:1.6rem;flex-wrap:wrap;font-size:.9rem;color:var(--muted)}
+.chart-legend span{display:flex;gap:.5rem;align-items:center}
+.chart-legend span::before{content:"";width:1.4rem;height:3px;background:var(--c);box-shadow:0 0 .5rem var(--c);border-radius:2px}
+.chart-legend span.be::before{width:.7rem;height:.7rem;border-radius:50%}
+#chart{width:100%;flex:1;min-height:0;display:block;overflow:visible}
+#chart .grid{stroke:var(--line-2);stroke-width:1}
+#chart .tick{fill:var(--muted);font-family:var(--f-mono);font-size:11px}
+#chart .ax{fill:var(--dim);font-family:var(--f-mono);font-size:10px;letter-spacing:.08em}
+#chart .l-on{stroke:var(--cyan);fill:none;stroke-width:3;filter:drop-shadow(0 0 5px rgba(46,242,255,.7))}
+#chart .l-cl{stroke:var(--pink);fill:none;stroke-width:3;filter:drop-shadow(0 0 5px rgba(255,61,154,.7))}
+#chart .a-on{fill:url(#gOn)}
+#chart .be-line{stroke:var(--amber);stroke-dasharray:4 4;stroke-width:1.5}
+#chart .be-dot{fill:var(--amber);filter:drop-shadow(0 0 6px rgba(255,176,32,.9))}
+#chart .be-txt{fill:var(--amber);font-family:var(--f-mono);font-size:11px;font-weight:700}
+.stackbar{display:flex;height:.7rem;border-radius:1rem;overflow:hidden;background:rgba(255,255,255,.05)}
+.stackbar i{display:block;height:100%;transition:width .4s ease}
+.stack-legend{display:flex;gap:1.2rem;flex-wrap:wrap;font-family:var(--f-mono);font-size:.78rem;color:var(--muted)}
+.stack-legend b{color:var(--fg);font-weight:600}
+
+/* ---------- 8. Method ---------- */
+.s-method .body{grid-template-rows:auto auto;align-content:start;gap:2.2rem}
+.steps{display:grid;grid-template-columns:repeat(6,1fr);gap:1rem;counter-reset:st}
+.step{position:relative;padding:1.3rem 1.2rem;display:flex;flex-direction:column;gap:.55rem;min-width:0}
+.step::before{counter-increment:st;content:counter(st, decimal-leading-zero);font-family:var(--f-mono);font-weight:700;font-size:1.8rem;color:var(--cyan);text-shadow:var(--glow-cyan);line-height:1}
+.step:not(:last-child)::after{content:"";position:absolute;top:2.2rem;right:-1rem;width:1rem;height:2px;background:var(--cyan);opacity:.5}
+.step h3{font-size:1.1rem}
+.step p{font-size:.92rem;color:var(--muted)}
+.method-bottom{display:grid;grid-template-columns:1fr 1.7fr;gap:1.6rem;align-items:stretch}
+.npv{display:flex;flex-direction:column;gap:.8rem;justify-content:center;border-color:rgba(255,176,32,.4);background:linear-gradient(160deg,var(--amber-soft),transparent 70%)}
+.npv .f{font-family:var(--f-mono);font-size:1.45rem;color:var(--amber);overflow-wrap:anywhere}
+.npv p{font-size:.95rem;color:var(--muted)}
+.levers{display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem}
+.lever{display:flex;gap:.9rem;align-items:center;padding:1rem 1.1rem;border:1px solid var(--line-2);border-radius:.8rem;background:var(--panel);min-width:0;color:var(--mint)}
+.lever div{display:flex;flex-direction:column;gap:.15rem;color:var(--fg);min-width:0}
+.lever b{font-size:1rem}
+.lever span{font-size:.85rem;color:var(--muted)}
+.lever .ibox{width:2.6rem;height:2.6rem;border-radius:.6rem}
+.lever .ico{width:1.3rem;height:1.3rem}
+
+/* ---------- 9. Conclusion ---------- */
+.s-end{justify-content:center}
+.s-end .big{font-family:var(--f-display);font-weight:800;font-size:4.4rem;line-height:1.02;letter-spacing:-.02em;max-width:80rem;text-wrap:balance}
+.s-end .big em{font-style:normal;background:linear-gradient(100deg,var(--cyan),var(--violet) 60%,var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.takeaways{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem}
+.tk{display:flex;gap:1.1rem;align-items:flex-start}
+.tk p{color:var(--muted);font-size:1rem;margin-top:.35rem}
+.end-foot{display:flex;justify-content:space-between;align-items:flex-end;gap:2rem;flex-wrap:wrap;border-top:1px solid var(--line-2);padding-top:1.4rem}
+.end-foot .q{font-family:var(--f-display);font-size:2rem;font-weight:700}
+.end-foot .q span{color:var(--pink);text-shadow:var(--glow-pink)}
+
+/* ---------- Nav bar ---------- */
+.nav{
+  position:absolute;left:0;right:0;bottom:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  padding-block:1.4rem calc(1.4rem + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px, 3.4rem, env(safe-area-inset-left,0px));padding-right:max(16px, 3.4rem, env(safe-area-inset-right,0px));
+  background:linear-gradient(0deg,var(--bg-2) 35%,transparent);
+}
+.nav-mid{display:flex;align-items:center;gap:1rem}
+.btn{display:inline-flex;align-items:center;gap:.6rem;height:2.9rem;padding:0 1.1rem;border-radius:.7rem;border:1px solid var(--line-2);background:rgba(13,19,32,.85);cursor:pointer;font-size:.95rem;transition:border-color .2s, color .2s, box-shadow .2s, background .2s;backdrop-filter:blur(6px)}
+.btn:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 1rem rgba(46,242,255,.25)}
+.btn.icon{width:2.9rem;padding:0;justify-content:center}
+.btn.icon .ico{width:1.35rem;height:1.35rem}
+.btn:disabled{opacity:.3;cursor:default;box-shadow:none;border-color:var(--line-2);color:inherit}
+.btn.primary{border-color:rgba(46,242,255,.5);color:var(--cyan)}
+.counter{font-family:var(--f-mono);font-size:.95rem;color:var(--muted);min-width:9.5rem;text-align:center;font-variant-numeric:tabular-nums}
+.counter b{color:var(--fg)}
+.nav-right{display:flex;align-items:center;gap:1rem}
+.hint{font-family:var(--f-mono);font-size:.78rem;color:var(--dim);display:flex;gap:.4rem;align-items:center}
+.hint kbd{font-family:inherit;border:1px solid var(--line-2);border-radius:.3rem;padding:.1rem .4rem;color:var(--muted)}
+
+/* ---------- Drawer ---------- */
+.scrim{position:fixed;inset:0;z-index:20;background:rgba(2,4,8,.6);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .3s}
+.drawer{
+  position:fixed;top:0;bottom:0;left:0;z-index:21;width:min(420px, 88vw);
+  background:var(--bg-2);border-right:1px solid var(--line-2);
+  transform:translateX(-102%);transition:transform .4s cubic-bezier(.2,.7,.2,1);
+  display:flex;flex-direction:column;
+  padding-block:calc(22px + env(safe-area-inset-top,0px)) calc(22px + env(safe-area-inset-bottom,0px));
+  padding-left:max(18px, env(safe-area-inset-left,0px));padding-right:18px;
+  font-size:15px;
+}
+body.menu-open .scrim{opacity:1;pointer-events:auto}
+body.menu-open .drawer{transform:none;box-shadow:0 0 60px rgba(46,242,255,.12)}
+.drawer-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.drawer-head span{font-family:var(--f-mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan)}
+.drawer .btn{height:40px;font-size:14px}
+.drawer .btn.icon{width:40px}
+.drawer .btn.icon .ico{width:20px;height:20px}
+.toc{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;overflow-y:auto}
+.toc button{width:100%;display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:center;text-align:left;padding:12px 12px;border-radius:10px;border:1px solid transparent;background:transparent;cursor:pointer;transition:background .2s,border-color .2s}
+.toc button:hover{background:var(--panel-2);border-color:var(--line-2)}
+.toc button[aria-current="true"]{background:var(--cyan-soft);border-color:rgba(46,242,255,.45)}
+.toc .n{font-family:var(--f-mono);font-weight:700;font-size:18px;color:var(--dim)}
+.toc button[aria-current="true"] .n{color:var(--cyan);text-shadow:var(--glow-cyan)}
+.toc .t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.toc .t b{font-weight:600;font-size:15px}
+.toc .t small{font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+/* ---------- Phone & portrait ---------- */
+@media (max-width:760px), (max-aspect-ratio:1/1){
+  html{font-size:14.5px}
+  body{display:block}
+  .stage{width:100%;height:100%;border:0}
+  .stage::before{display:none}
+  .hud{top:calc(14px + env(safe-area-inset-top,0px)*0);font-size:10.5px}
+  .hud .sec{display:none}
+  .slide{
+    overflow-y:auto;overflow-x:hidden;justify-content:flex-start;gap:1.5rem;
+    padding-block:3.6rem 6.6rem;
+    padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));
+    -webkit-overflow-scrolling:touch;
+  }
+  h2{font-size:1.85rem}
+  .s-calc h2{font-size:1.7rem}
+  .body{flex:none}
+  .s-title .title-grid,.s-problem .body,.s-struct .body,.s-calc .body,.method-bottom{grid-template-columns:1fr;gap:1.4rem}
+  .tco,.tco-wrap::after{font-size:6.4rem}
+  .tco-wrap::after{left:.5rem;top:.5rem}
+  .lead{font-size:1.35rem}
+  .stat-big .num{font-size:3rem}
+  .iceberg{min-height:400px}
+  .timeline{grid-template-columns:1fr;gap:0}
+  .timeline::before{left:.65rem;right:auto;top:0;bottom:0;width:2px;height:auto;background:linear-gradient(180deg,var(--cyan),var(--violet),var(--pink))}
+  .tl{padding:0 0 1.2rem 2.6rem}
+  .tl::before{top:.1rem}
+  .f-term b{font-size:1.4rem}
+  .f-op{font-size:1.5rem}
+  .donut-wrap{width:min(19rem,100%);height:auto;aspect-ratio:1;margin:0 auto}
+  .legend{grid-template-columns:1fr}
+  .s-hidden .body{grid-template-columns:1fr 1fr;grid-auto-rows:auto}
+  .vs-head{grid-template-columns:1fr}
+  .vs-badge{padding:.4rem;font-size:1.4rem}
+  .vs-head > .vs-spacer{display:none}
+  .vs-row{grid-template-columns:1fr;gap:.4rem}
+  .vs-row > span:nth-child(2)::before{content:"CAPEX · ";color:var(--cyan);font-family:var(--f-mono);font-size:.8em}
+  .vs-row > span:nth-child(3)::before{content:"OPEX · ";color:var(--pink);font-family:var(--f-mono);font-size:.8em}
+  .kpis{grid-template-columns:1fr 1fr}
+  .chart-card{min-height:300px}
+  .steps{grid-template-columns:1fr 1fr}
+  .step::after{display:none}
+  .levers{grid-template-columns:1fr}
+  .takeaways{grid-template-columns:1fr}
+  .s-end .big{font-size:2.3rem}
+  .nav{padding-block:.8rem calc(.8rem + env(safe-area-inset-bottom,0px))}
+  .hint,.fs-btn{display:none}
+  .btn .lbl{display:none}
+  .btn{padding:0 .85rem}
+  .counter{min-width:0}
+}
+@media (max-width:420px){
+  .s-hidden .body{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  .slide,.slide.active,.progress i,.drawer,.scrim{transition:none}
+  .slide.active .r,.slide.active .donut,.slide.active .bar i,.slide.active .spark i{animation:none}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-server" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 6h.01M6 18h.01"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></symbol>
+    <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-cap" viewBox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c3 3 9 3 12 0v-5M22 10v6"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24"><path d="M12 22v-5M9 8V2M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+    <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l3-2 3 2 2-2 2 2 3-2 3 2V2l-3 2-3-2-2 2-2-2-3 2z"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 3v18M7 21h10M3 7h18"/><path d="m6 7-3 7a3 3 0 0 0 6 0Z"/><path d="m18 7-3 7a3 3 0 0 0 6 0Z"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24M10.73 5.08A10.4 10.4 0 0 1 12 5c7 0 10 7 10 7a13 13 0 0 1-1.67 2.68M6.61 6.61A13.5 13.5 0 0 0 2 12s3 7 10 7a9.7 9.7 0 0 0 5.39-1.61M2 2l20 20"/></symbol>
+    <symbol id="i-bank" viewBox="0 0 24 24"><path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7M12 2l8 5H4z"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-7"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></symbol>
+    <symbol id="i-cycle" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5M3 21v-5h5"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-max" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+  </defs>
+</svg>
+
+<main class="stage" id="stage" aria-roledescription="презентация">
+  <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+  <div class="hud" aria-hidden="true">
+    <span class="dotline"><b>TCO</b>/ Тема 14</span>
+    <span class="sec" id="hudSec">Модуль 3 · Затраты и эффективность в ИТ</span>
+  </div>
+
+  <div class="slides" id="slides">
+
+    <!-- 1 -->
+    <section class="slide s-title active" data-title="TCO как ключевая метрика" data-kicker="Титул">
+      <div class="title-grid">
+        <div class="title-main">
+          <p class="eyebrow r" style="--i:0">Модуль 3 · Затраты и эффективность в ИТ</p>
+          <h1 class="r" style="--i:1"><span class="tco-wrap"><span class="tco">TCO</span></span></h1>
+          <p class="lead r" style="--i:2">Совокупная стоимость владения как ключевая метрика ИТ-инфраструктуры</p>
+          <div class="chips r" style="--i:3">
+            <span class="chip">Структура TCO</span><span class="chip">Скрытые затраты</span><span class="chip">CAPEX vs OPEX</span>
+          </div>
+        </div>
+        <aside class="title-side">
+          <div class="stat-big r" style="--i:4">
+            <span class="num cyan">70–80%</span>
+            <span>затрат на ИТ-систему приходятся на годы эксплуатации, а не на момент покупки</span>
+            <small>Оценка отраслевых аналитиков</small>
+          </div>
+          <div class="formula-mini r" style="--i:5">TCO = CAPEX + ΣOPEX + Hidden − Residual</div>
+          <div class="author r" style="--i:6"><span class="label">Доклад · Тема №14</span><strong>Махов Артём Сергеевич</strong></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- 2 -->
+    <section class="slide s-problem" data-title="Айсберг затрат" data-kicker="Проблема">
+      <div class="head">
+        <p class="eyebrow r" style="--i:0">Проблема</p>
+        <h2 class="r" style="--i:1">Цена покупки — лишь <em class="pk">верхушка айсберга</em></h2>
+      </div>
+      <div class="body">
+        <div class="pain-list">
+          <div class="card pain r" style="--i:2">
+            <span class="ibox pink"><svg class="ico"><use href="#i-receipt"/></svg></span>
+            <div><h3>Бюджет утверждают по счёту поставщика</h3><p>Сравнивают ценники серверов и лицензий, а не полную стоимость решения.</p></div>
+          </div>
+          <div class="card pain r" style="--i:3">
+            <span class="ibox amber"><svg class="ico"><use href="#i-clock"/></svg></span>
+            <div><h3>Эксплуатация длится годы</h3><p>Оборудование служит 3–7 лет, и всё это время требует людей, энергии и поддержки.</p></div>
+          </div>
+          <div class="card pain r" style="--i:4">
+            <span class="ibox violet"><svg class="ico"><use href="#i-eye"/></svg></span>
+            <div><h3>Косвенные потери не видны в смете</h3><p>Простои, обучение и миграции оплачивает бизнес, но они не попадают в ИТ-бюджет.</p></div>
+          </div>
+        </div>
+        <div class="iceberg r" style="--i:3" role="img" aria-label="Айсберг: видимые затраты 20–30 процентов, скрытые 70–80 процентов">
+          <svg viewBox="0 0 400 440" preserveAspectRatio="xMaxYMid meet" aria-hidden="true">
+            <defs>
+              <linearGradient id="water" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b2a3d" stop-opacity=".9"/><stop offset="1" stop-color="#05070c" stop-opacity="1"/></linearGradient>
+              <linearGradient id="iceTop" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2ef2ff" stop-opacity=".55"/><stop offset="1" stop-color="#2ef2ff" stop-opacity=".12"/></linearGradient>
+              <linearGradient id="iceBot" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff3d9a" stop-opacity=".38"/><stop offset="1" stop-color="#9a7bff" stop-opacity=".08"/></linearGradient>
+            </defs>
+            <rect x="-1200" y="119" width="1600" height="400" fill="url(#water)"/>
+            <line x1="-1200" y1="119" x2="400" y2="119" stroke="#2ef2ff" stroke-width="1.2" stroke-dasharray="6 5" opacity=".8"/>
+            <polygon points="150,119 196,42 214,58 232,40 262,119" fill="url(#iceTop)" stroke="#2ef2ff" stroke-width="1.5"/>
+            <polygon points="128,119 284,119 336,200 318,320 236,404 150,392 86,300 92,200" fill="url(#iceBot)" stroke="#ff3d9a" stroke-width="1.5"/>
+            <polyline points="128,119 176,190 150,300 190,392" fill="none" stroke="#ff3d9a" stroke-opacity=".35"/>
+            <polyline points="284,119 250,230 290,320" fill="none" stroke="#ff3d9a" stroke-opacity=".35"/>
+          </svg>
+          <div class="ice-tag top"><b class="cyan">20–30%</b><span>Видимо: оборудование и лицензии</span></div>
+          <span class="ice-water">Уровень сметы</span>
+          <div class="ice-list">
+            <div class="ice-tag bottom"><b class="pink">70–80%</b><span>Скрыто под водой</span></div>
+            <span>Персонал и администрирование</span>
+            <span>Энергия, охлаждение, площади ЦОД</span>
+            <span>Поддержка и обновления</span>
+            <span>Простои и потери продуктивности</span>
+            <span>Обучение, миграция, утилизация</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 -->
+    <section class="slide s-def" data-title="Что такое TCO" data-kicker="Решение">
+      <div class="head">
+        <p class="eyebrow r" style="--i:0">Решение</p>
+        <h2 class="r" style="--i:1">TCO — все затраты на актив <em>за весь жизненный цикл</em></h2>
+      </div>
+      <div class="body">
+        <div class="formula r" style="--i:2" aria-label="Формула TCO">
+          <div class="f-term" style="color:var(--fg)"><b>TCO</b><span>стоимость владения</span></div>
+          <div class="f-op">=</div>
+          <div class="f-term cyan"><b>CAPEX</b><span>покупка и внедрение</span></div>
+          <div class="f-op">+</div>
+          <div class="f-term violet"><b>Σ OPEX<sub>t</sub></b><span>эксплуатация по годам</span></div>
+          <div class="f-op">+</div>
+          <div class="f-term pink"><b>Hidden</b><span>косвенные потери</span></div>
+          <div class="f-op">−</div>
+          <div class="f-term mint"><b>Residual</b><span>остаточная стоимость</span></div>
+        </div>
+        <div class="def-note r" style="--i:3">
+          <span><strong>Источник метода:</strong> Gartner, 1987</span>
+          <span><strong>Горизонт оценки:</strong> обычно 3–5 лет</span>
+          <span><strong>Единица сравнения:</strong> сценарии и альтернативы</span>
+        </div>
+        <div class="timeline">
+          <div class="tl r" style="--i:4"><span class="when">Год 0</span><h3>Приобретение</h3><p>Оборудование, лицензии, проектирование</p></div>
+          <div class="tl r" style="--i:5"><span class="when">1–6 мес</span><h3>Внедрение</h3><p>Монтаж, интеграция, перенос данных, обучение</p></div>
+          <div class="tl hot r" style="--i:6"><span class="when">3–5 лет</span><h3>Эксплуатация</h3><p>Персонал, энергия, поддержка, простои — основная доля TCO</p></div>
+          <div class="tl r" style="--i:7"><span class="when">По ходу</span><h3>Модернизация</h3><p>Апгрейды, расширение, новые версии ПО</p></div>
+          <div class="tl r" style="--i:8"><span class="when">Финал</span><h3>Вывод</h3><p>Демонтаж, уничтожение данных, продажа остатков</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 -->
+    <section class="slide s-struct" data-title="Структура TCO" data-kicker="Аналитика">
+      <div class="head">
+        <p class="eyebrow r" style="--i:0">Структура TCO</p>
+        <h2 class="r" style="--i:1">Куда уходят деньги за <em>5 лет</em> владения</h2>
+      </div>
+      <div class="body">
+        <div class="donut-wrap r" style="--i:2" role="img" aria-label="Кольцевая диаграмма структуры TCO: прямые затраты 78 процентов, косвенные 22 процента">
+          <div class="donut"></div>
+          <div class="donut-hole"><b class="cyan">78<small style="font-size:.5em">%</small></b><span>прямые затраты, видимые в бюджете</span></div>
+        </div>
+        <div class="legend">
+          <div class="lg-group">
+            <div class="lg-head r" style="--i:3"><h3>Прямые затраты</h3><b class="cyan">78%</b></div>
+            <div class="lg-row r" style="--i:4;--c:var(--cyan);--w:100%"><span class="nm">Персонал ИТ</span><span class="pc">27%</span><span class="bar"><i></i></span></div>
+            <div class="lg-row r" style="--i:5;--c:var(--violet);--w:66.7%"><span class="nm">Оборудование</span><span class="pc">18%</span><span class="bar"><i></i></span></div>
+            <div class="lg-row r" style="--i:6;--c:#4d8dff;--w:55.6%"><span class="nm">ПО и лицензии</span><span class="pc">15%</span><span class="bar"><i></i></span></div>
+            <div class="lg-row r" style="--i:7;--c:var(--mint);--w:40.7%"><span class="nm">ЦОД и электроэнергия</span><span class="pc">11%</span><span class="bar"><i></i></span></div>
+            <div class="lg-row r" style="--i:8;--c:#7fa3c9;--w:25.9%"><span class="nm">Поддержка и сервис</span><span class="pc">7%</span><span class="bar"><i></i></span></div>
+          </div>
+          <div class="lg-group">
+            <div class="lg-head r" style="--i:4"><h3>Косвенные затраты</h3><b class="pink">22%</b></div>
+            <div class="lg-row r" style="--i:5;--c:var(--pink);--w:44.4%"><span class="nm">Простои и потери</span><span class="pc">12%</span><span class="bar"><i></i></span></div>
+            <div class="lg-row r" style="--i:6;--c:var(--amber);--w:37%"><span class="nm">Самоподдержка пользователей и обучение</span><span class="pc">10%</span><span class="bar"><i></i></span></div>
+            <p class="muted r" style="--i:7;font-size:1rem;margin-top:.6rem">Косвенные затраты не проходят через ИТ-бюджет, поэтому их чаще всего пропускают при выборе решения.</p>
+          </div>
+          <p class="lg-note r" style="--i:9">Иллюстративная структура для собственной серверной инфраструктуры средней компании</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section class="slide s-hidden" data-title="Скрытые затраты" data-kicker="Аналитика">
+      <div class="head">
+        <p class="eyebrow r" style="--i:0">Скрытые затраты</p>
+        <h2 class="r" style="--i:1">Восемь статей, которых <em class="pk">нет в смете</em></h2>
+      </div>
+      <div class="body">
+        <article class="card hc r" style="--i:2;--c:var(--pink)">
+          <div class="top"><span class="ibox"><svg class="ico"><use href="#i-alert"/></svg></span><span class="metric">$300K+</span></div>
+          <h3>Простои</h3><p>Час недоступности для 90% средних и крупных компаний</p><small>ITIC, Hourly Cost of Downtime</small>
+        </article>
+        <article class="card hc r" style="--i:3;--c:var(--amber)">
+          <div class="top"><span class="ibox"><svg class="ico"><use href="#i-zap"/></svg></span><span class="metric">PUE 1,56</span></div>
+          <h3>Энергия и охлаждение</h3><p>На 1 кВт ИТ-нагрузки ещё ≈0,56 кВт уходит на инженерные системы</p><small>Uptime Institute, 2024</small>
+        </article>
+        <article class="card hc r" style="--i:4;--c:var(--violet)">
+          <div class="top"><span class="ibox"><svg class="ico"><use href="#i-layers"/></svg></span><span class="metric">20–40%</span></div>
+          <h3>Технический долг</h3><p>Доля стоимости ИТ-ландшафта, которую «съедает» техдолг</p><small>McKinsey</small>
+        </article>
+        <article class="card hc r" style="--i:5;--c:var(--cyan)">
+          <div class="top"><span class="ibox"><svg class="ico"><use href="#i-cap"/></svg></span><span class="tag">Время людей</span></div>
+          <h3>Обучение и адаптация</h3><p>Курсы, сертификация и месяцы до выхода команды на полную скорость</p>
+        </article>
+        <article class="card hc r" style="--i:6;--c:var(--mint)">
+          <div class="top"><span class="ibox"><svg class="ico"><use href="#i-plug"/></svg></span><span class="tag">Проект в проекте</span></div>
+          <h3>Интеграция и миграция</h3><p>Перенос данных, доработка интерфейсов, параллельная работа двух систем</p>
+        </article>
+        <article class="card hc r" style="--i:7;--c:#4d8dff">
+          <div class="top"><span class="ibox"><svg class="ico"><use href="#i-shield"/></svg></span><span class="tag">Аудит</span></div>
+          <h3>Лицензии и комплаенс</h3><p>Аудиты вендора, доплаты за ядра и пользователей, требования 152-ФЗ</p>
+        </article>
+        <article class="card hc r" style="--i:8;--c:var(--pink)">
+          <div class="top"><span class="ibox"><svg class="ico"><use href="#i-lock"/></svg></span><span class="tag">Цена выхода</span></div>
+          <h3>Vendor lock-in</h3><p>Плата за исходящий трафик, перепроектирование и переобучение при смене поставщика</p>
+        </article>
+        <article class="card hc r" style="--i:9;--c:var(--amber)">
+          <div class="top"><span class="ibox"><svg class="ico"><use href="#i-trash"/></svg></span><span class="tag">Конец цикла</span></div>
+          <h3>Вывод из эксплуатации</h3><p>Демонтаж, гарантированное уничтожение данных, утилизация техники</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section class="slide s-capex" data-title="CAPEX vs OPEX" data-kicker="Аналитика">
+      <div class="head">
+        <p class="eyebrow r" style="--i:0">Два типа затрат</p>
+        <h2 class="r" style="--i:1"><em>CAPEX</em> против <em class="pk">OPEX</em></h2>
+      </div>
+      <div class="body">
+        <div class="vs-head">
+          <div class="vs-badge vs-spacer r" style="--i:2">VS</div>
+          <div class="vs-col cyan r" style="--i:2">
+            <span class="ibox"><svg class="ico"><use href="#i-bank"/></svg></span>
+            <div><h3>CAPEX</h3><p>Капитальные затраты</p></div>
+            <span class="spark" aria-hidden="true"><i style="--h:100%;--k:0"></i><i style="--h:6%;--k:1"></i><i style="--h:6%;--k:2"></i><i style="--h:6%;--k:3"></i><i style="--h:6%;--k:4"></i></span>
+          </div>
+          <div class="vs-col pink r" style="--i:3">
+            <span class="ibox"><svg class="ico"><use href="#i-repeat"/></svg></span>
+            <div><h3>OPEX</h3><p>Операционные затраты</p></div>
+            <span class="spark" aria-hidden="true"><i style="--h:38%;--k:0"></i><i style="--h:38%;--k:1"></i><i style="--h:40%;--k:2"></i><i style="--h:42%;--k:3"></i><i style="--h:44%;--k:4"></i></span>
+          </div>
+        </div>
+        <div class="vs-table r" style="--i:4">
+          <div class="vs-row"><span>Суть</span><span>Покупка актива, который служит дольше года</span><span>Регулярная оплата работы и сервисов</span></div>
+          <div class="vs-row"><span>Учёт</span><span>Ставится на баланс, списывается амортизацией</span><span>Расход текущего периода в отчёте о прибылях</span></div>
+          <div class="vs-row"><span>Налоги</span><span>Снижает базу постепенно, через амортизацию</span><span>Уменьшает налоговую базу сразу</span></div>
+          <div class="vs-row"><span>Деньги</span><span>Крупный платёж в начале проекта</span><span>Равномерные платежи по факту потребления</span></div>
+          <div class="vs-row"><span>Гибкость</span><span>Мощность закупают «с запасом» на годы</span><span>Масштабирование вверх и вниз по запросу</span></div>
+          <div class="vs-row"><span>Примеры</span><span>Серверы, СХД, бессрочные лицензии, строительство ЦОД</span><span>Облако IaaS/SaaS, аренда, зарплаты, электроэнергия</span></div>
+        </div>
+        <div class="vs-foot r" style="--i:5"><svg class="ico"><use href="#i-scale"/></svg><span>TCO сводит оба типа затрат в одну цифру и позволяет честно сравнить покупку с подпиской.</span></div>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section class="slide s-calc" data-title="Калькулятор: On-prem vs Облако" data-kicker="Интерактив">
+      <div class="head">
+        <p class="eyebrow r" style="--i:0">Интерактивный расчёт</p>
+        <h2 class="r" style="--i:1">Собственный ЦОД или облако: <em>где точка безубыточности?</em></h2>
+      </div>
+      <div class="body">
+        <div class="card controls r" style="--i:2">
+          <div class="ctl">
+            <label for="capex"><span><span class="grp cyan">On-prem · </span>Оборудование и лицензии</span><output id="o-capex"></output></label>
+            <input type="range" id="capex" min="2" max="40" step="0.5" value="15">
+          </div>
+          <div class="ctl">
+            <label for="opex"><span><span class="grp cyan">On-prem · </span>Эксплуатация в год</span><output id="o-opex"></output></label>
+            <input type="range" id="opex" min="0.5" max="10" step="0.25" value="3">
+          </div>
+          <div class="ctl">
+            <label for="hidden"><span><span class="grp cyan">On-prem · </span>Скрытые затраты к OPEX</span><output id="o-hidden"></output></label>
+            <input type="range" id="hidden" min="0" max="60" step="5" value="25">
+          </div>
+          <div class="ctl">
+            <label for="cloud"><span><span class="grp pink">Облако · </span>Подписка в год</span><output id="o-cloud"></output></label>
+            <input type="range" id="cloud" min="1" max="20" step="0.25" value="7.5" style="--c:var(--pink)">
+          </div>
+          <div class="ctl">
+            <label for="years"><span><span class="grp amber">Горизонт · </span>Срок владения</span><output id="o-years"></output></label>
+            <input type="range" id="years" min="1" max="10" step="1" value="5" style="--c:var(--amber)">
+          </div>
+          <p class="assume">Допущение: через 5 лет оборудование обновляется за 60% исходного CAPEX. Суммы в млн ₽, без дисконтирования.</p>
+        </div>
+        <div class="result r" style="--i:3">
+          <div class="kpis">
+            <div class="kpi"><span>TCO on-prem</span><b class="cyan" id="k-on">—</b></div>
+            <div class="kpi"><span>TCO облако</span><b class="pink" id="k-cl">—</b></div>
+            <div class="kpi"><span>Выгоднее</span><b id="k-win">—</b></div>
+            <div class="kpi"><span>Безубыточность</span><b class="amber" id="k-be">—</b></div>
+          </div>
+          <div class="card chart-card">
+            <div class="chart-legend">
+              <span style="--c:var(--cyan)">On-prem, накопленно</span>
+              <span style="--c:var(--pink)">Облако, накопленно</span>
+              <span class="be" style="--c:var(--amber)">Точка безубыточности</span>
+            </div>
+            <svg id="chart" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="График накопленных затрат on-prem и облака по годам"></svg>
+            <div class="stackbar" aria-hidden="true"><i id="sb-c" style="background:var(--cyan)"></i><i id="sb-o" style="background:var(--violet)"></i><i id="sb-h" style="background:var(--pink)"></i></div>
+            <div class="stack-legend" id="sb-legend"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section class="slide s-method" data-title="Методика и рычаги снижения" data-kicker="Практика">
+      <div class="head">
+        <p class="eyebrow r" style="--i:0">Как считать и как снижать</p>
+        <h2 class="r" style="--i:1">Шесть шагов расчёта TCO</h2>
+      </div>
+      <div class="body">
+        <div class="steps">
+          <div class="card step r" style="--i:2"><h3>Границы</h3><p>Система, подразделения, горизонт 3–5 лет</p></div>
+          <div class="card step r" style="--i:3"><h3>Инвентаризация</h3><p>Оборудование, ПО, контракты, люди</p></div>
+          <div class="card step r" style="--i:4"><h3>Прямые затраты</h3><p>CAPEX и бюджетный OPEX по годам</p></div>
+          <div class="card step r" style="--i:5"><h3>Скрытые затраты</h3><p>Простои, обучение, интеграция, выход</p></div>
+          <div class="card step r" style="--i:6"><h3>Дисконтирование</h3><p>Приведение потоков к NPV</p></div>
+          <div class="card step r" style="--i:7"><h3>Сценарии</h3><p>On-prem, облако, гибрид и чувствительность</p></div>
+        </div>
+        <div class="method-bottom">
+          <div class="card npv r" style="--i:8">
+            <span class="label">Дисконтированный TCO</span>
+            <div class="f">TCO = CAPEX + Σ OPEX<sub>t</sub> / (1 + r)<sup>t</sup></div>
+            <p>r — ставка дисконтирования, t — год. Будущий рубль стоит меньше сегодняшнего.</p>
+          </div>
+          <div class="levers">
+            <div class="lever r" style="--i:8"><span class="ibox"><svg class="ico"><use href="#i-box"/></svg></span><div><b>Виртуализация</b><span>консолидация серверов</span></div></div>
+            <div class="lever r" style="--i:9"><span class="ibox"><svg class="ico"><use href="#i-code"/></svg></span><div><b>Автоматизация</b><span>IaC, CI/CD, самообслуживание</span></div></div>
+            <div class="lever r" style="--i:10"><span class="ibox"><svg class="ico"><use href="#i-chart"/></svg></span><div><b>FinOps</b><span>контроль облачных счетов</span></div></div>
+            <div class="lever r" style="--i:11"><span class="ibox"><svg class="ico"><use href="#i-grid"/></svg></span><div><b>Стандартизация</b><span>единый парк и стек</span></div></div>
+            <div class="lever r" style="--i:12"><span class="ibox"><svg class="ico"><use href="#i-zap"/></svg></span><div><b>Энергоэффективность</b><span>снижение PUE</span></div></div>
+            <div class="lever r" style="--i:13"><span class="ibox"><svg class="ico"><use href="#i-cycle"/></svg></span><div><b>Жизненный цикл</b><span>плановое обновление</span></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 -->
+    <section class="slide s-end" data-title="Выводы" data-kicker="Заключение">
+      <p class="eyebrow r" style="--i:0">Заключение</p>
+      <p class="big r" style="--i:1">Считайте не цену покупки, а <em>стоимость владения</em></p>
+      <div class="takeaways">
+        <div class="card tk r" style="--i:2"><span class="ibox cyan"><svg class="ico"><use href="#i-target"/></svg></span><div><h3>Весь жизненный цикл</h3><p>TCO охватывает путь от закупки до утилизации, а не одну строку счёта.</p></div></div>
+        <div class="card tk r" style="--i:3"><span class="ibox pink"><svg class="ico"><use href="#i-eye"/></svg></span><div><h3>Скрытое — главное</h3><p>Эксплуатация и косвенные потери обычно в разы больше цены покупки.</p></div></div>
+        <div class="card tk r" style="--i:4"><span class="ibox violet"><svg class="ico"><use href="#i-scale"/></svg></span><div><h3>Общая шкала</h3><p>CAPEX и OPEX, своё и облачное сравнимы только через TCO.</p></div></div>
+      </div>
+      <div class="end-foot r" style="--i:5">
+        <div class="q">Спасибо за внимание! <span>Вопросы?</span></div>
+        <div class="author"><span class="label">Модуль 3 · Тема №14</span><strong>Махов А. С.</strong></div>
+      </div>
+    </section>
+
+  </div>
+
+  <nav class="nav" aria-label="Навигация по слайдам">
+    <button class="btn" id="menuBtn" aria-controls="drawer" aria-expanded="false"><svg class="ico"><use href="#i-grid"/></svg><span class="lbl">Все слайды</span></button>
+    <div class="nav-mid">
+      <button class="btn icon" id="prev" aria-label="Предыдущий слайд"><svg class="ico"><use href="#i-left"/></svg></button>
+      <span class="counter" id="counter" aria-live="polite">Слайд <b>1</b> из 9</span>
+      <button class="btn icon primary" id="next" aria-label="Следующий слайд"><svg class="ico"><use href="#i-right"/></svg></button>
+    </div>
+    <div class="nav-right">
+      <span class="hint"><kbd>←</kbd><kbd>→</kbd> листать · <kbd>M</kbd> меню</span>
+      <button class="btn icon fs-btn" id="fsBtn" aria-label="Во весь экран"><svg class="ico"><use href="#i-max"/></svg></button>
+    </div>
+  </nav>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Оглавление" aria-hidden="true">
+  <div class="drawer-head">
+    <span>Оглавление · 9 слайдов</span>
+    <button class="btn icon" id="closeBtn" aria-label="Закрыть оглавление"><svg class="ico"><use href="#i-x"/></svg></button>
+  </div>
+  <ol class="toc" id="toc"></ol>
+</aside>
+
+<script>
+(function(){
+  const slides=[...document.querySelectorAll('.slide')];
+  const N=slides.length;
+  const bar=document.getElementById('bar');
+  const counter=document.getElementById('counter');
+  const prev=document.getElementById('prev');
+  const next=document.getElementById('next');
+  const toc=document.getElementById('toc');
+  const hudSec=document.getElementById('hudSec');
+  const drawer=document.getElementById('drawer');
+  const menuBtn=document.getElementById('menuBtn');
+  let cur=0;
+
+  slides.forEach((s,i)=>{
+    const li=document.createElement('li');
+    const b=document.createElement('button');
+    b.type='button';
+    b.innerHTML='<span class="n">'+String(i+1).padStart(2,'0')+'</span><span class="t"><b></b><small></small></span>';
+    b.querySelector('b').textContent=s.dataset.title;
+    b.querySelector('small').textContent=s.dataset.kicker;
+    b.addEventListener('click',()=>{go(i);closeMenu();});
+    li.appendChild(b);toc.appendChild(li);
+  });
+  const tocBtns=[...toc.querySelectorAll('button')];
+
+  function go(n){
+    n=Math.max(0,Math.min(N-1,n));
+    cur=n;
+    slides.forEach((s,i)=>{
+      s.classList.toggle('active',i===n);
+      s.classList.toggle('past',i<n);
+      s.setAttribute('aria-hidden',i===n?'false':'true');
+      if('inert' in s) s.inert=i!==n;
+    });
+    slides[n].scrollTop=0;
+    bar.style.width=((n+1)/N*100)+'%';
+    counter.innerHTML='Слайд <b>'+(n+1)+'</b> из '+N;
+    prev.disabled=n===0; next.disabled=n===N-1;
+    tocBtns.forEach((b,i)=>b.setAttribute('aria-current',i===n?'true':'false'));
+    hudSec.textContent=String(n+1).padStart(2,'0')+' · '+slides[n].dataset.kicker;
+    try{history.replaceState(null,'','#s'+(n+1));}catch(e){}
+  }
+  function openMenu(){document.body.classList.add('menu-open');drawer.setAttribute('aria-hidden','false');menuBtn.setAttribute('aria-expanded','true');tocBtns[cur].focus();}
+  function closeMenu(){document.body.classList.remove('menu-open');drawer.setAttribute('aria-hidden','true');menuBtn.setAttribute('aria-expanded','false');}
+  const isOpen=()=>document.body.classList.contains('menu-open');
+
+  prev.addEventListener('click',()=>go(cur-1));
+  next.addEventListener('click',()=>go(cur+1));
+  menuBtn.addEventListener('click',()=>isOpen()?closeMenu():openMenu());
+  document.getElementById('closeBtn').addEventListener('click',closeMenu);
+  document.getElementById('scrim').addEventListener('click',closeMenu);
+  document.getElementById('fsBtn').addEventListener('click',()=>{
+    try{
+      if(document.fullscreenElement){document.exitFullscreen();}
+      else{const p=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();if(p&&p.catch)p.catch(()=>{});}
+    }catch(e){}
+  });
+
+  document.addEventListener('keydown',e=>{
+    if(e.target.matches&&e.target.matches('input,textarea,select')) return;
+    if(e.key==='Escape'&&isOpen()){closeMenu();menuBtn.focus();return;}
+    if(isOpen()) return;
+    if(e.key==='ArrowRight'||e.key==='PageDown'||(e.key===' '&&!e.target.matches('button'))){e.preventDefault();go(cur+1);}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(cur-1);}
+    else if(e.key==='Home'){go(0);}
+    else if(e.key==='End'){go(N-1);}
+    else if(e.key==='m'||e.key==='M'||e.key==='ь'||e.key==='Ь'){openMenu();}
+  });
+
+  let tx=null,ty=null;
+  const stage=document.getElementById('stage');
+  stage.addEventListener('touchstart',e=>{
+    if(e.target.closest('input,.nav')){tx=null;return;}
+    tx=e.touches[0].clientX;ty=e.touches[0].clientY;
+  },{passive:true});
+  stage.addEventListener('touchend',e=>{
+    if(tx===null) return;
+    const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty;
+    if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.4){go(cur+(dx<0?1:-1));}
+    tx=null;
+  },{passive:true});
+
+  /* ---------- TCO calculator ---------- */
+  const $=id=>document.getElementById(id);
+  const ids=['capex','opex','hidden','cloud','years'];
+  const fmt=v=>v.toLocaleString('ru-RU',{maximumFractionDigits:1,minimumFractionDigits:v<10&&v%1?1:0});
+  const money=v=>fmt(Math.round(v*10)/10)+' млн ₽';
+  const yearsWord=n=>{const a=n%10,b=n%100;return (a===1&&b!==11)?'год':(a>=2&&a<=4&&(b<12||b>14))?'года':'лет';};
+
+  function onprem(t,p){return p.capex+t*p.opex*(1+p.hidden/100)+(t>5?0.6*p.capex:0);}
+  function cloud(t,p){return t*p.cloud;}
+
+  function calc(){
+    const p={};ids.forEach(k=>{const el=$(k);p[k]=parseFloat(el.value);el.style.setProperty('--fill',((el.value-el.min)/(el.max-el.min)*100)+'%');});
+    $('o-capex').textContent=money(p.capex);
+    $('o-opex').textContent=money(p.opex);
+    $('o-hidden').textContent=p.hidden+'%';
+    $('o-cloud').textContent=money(p.cloud);
+    $('o-years').textContent=p.years+' '+yearsWord(p.years);
+
+    const Y=p.years, on=onprem(Y,p), cl=cloud(Y,p);
+    let be=null;
+    for(let t=0;t<=Y+1e-9;t+=0.01){ if(cloud(t,p)>=onprem(t,p)&&t>0){be=t;break;} }
+    $('k-on').textContent=money(on);
+    $('k-cl').textContent=money(cl);
+    const w=$('k-win');
+    if(Math.abs(on-cl)<0.05){w.textContent='Паритет';w.className='';}
+    else if(on<cl){w.textContent='On-prem';w.className='cyan';}
+    else{w.textContent='Облако';w.className='pink';}
+    const br=be===null?null:Math.round(be*10)/10;
+    $('k-be').textContent=br===null?'нет в горизонте':Number.isInteger(br)?br+' '+yearsWord(br):fmt(br)+' года';
+
+    const capT=p.capex+(Y>5?0.6*p.capex:0), opT=Y*p.opex, hT=Y*p.opex*p.hidden/100, tot=capT+opT+hT;
+    $('sb-c').style.width=(capT/tot*100)+'%';$('sb-o').style.width=(opT/tot*100)+'%';$('sb-h').style.width=(hT/tot*100)+'%';
+    $('sb-legend').innerHTML='<span>Структура on-prem: </span><span class="cyan">CAPEX <b>'+Math.round(capT/tot*100)+'%</b></span><span class="violet">OPEX <b>'+Math.round(opT/tot*100)+'%</b></span><span class="pink">Скрытые <b>'+Math.round(hT/tot*100)+'%</b></span>';
+
+    draw(p,be);
+  }
+
+  function niceMax(v){const e=Math.pow(10,Math.floor(Math.log10(v)));const m=v/e;const s=m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10;return s*e;}
+  function draw(p,be){
+    const W=640,H=280,L=52,R=14,T=14,B=34;
+    const Y=p.years;
+    const maxV=niceMax(Math.max(onprem(Y,p),cloud(Y,p))*1.05);
+    const x=t=>L+(t/Y)*(W-L-R), y=v=>T+(1-v/maxV)*(H-T-B);
+    let s='<defs><linearGradient id="gOn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2ef2ff" stop-opacity=".22"/><stop offset="1" stop-color="#2ef2ff" stop-opacity="0"/></linearGradient></defs>';
+    const ticks=5;
+    for(let i=0;i<=ticks;i++){const v=maxV*i/ticks, yy=y(v);
+      s+='<line class="grid" x1="'+L+'" x2="'+(W-R)+'" y1="'+yy+'" y2="'+yy+'" '+(i?'stroke-dasharray="2 4"':'')+'/>';
+      s+='<text class="tick" x="'+(L-8)+'" y="'+(yy+4)+'" text-anchor="end">'+fmt(v)+'</text>';}
+    for(let t=0;t<=Y;t++){s+='<text class="tick" x="'+x(t)+'" y="'+(H-B+18)+'" text-anchor="middle">'+t+'</text>';}
+    s+='<text class="ax" x="'+(W-R)+'" y="'+(H-2)+'" text-anchor="end">ГОДЫ</text>';
+    s+='<text class="ax" x="'+(L-8)+'" y="'+(T-2)+'" text-anchor="end">МЛН ₽</text>';
+    const steps=200; let pOn='',pCl='';
+    for(let k=0;k<=steps;k++){const t=Y*k/steps;
+      pOn+=(k?'L':'M')+x(t).toFixed(1)+' '+y(onprem(t,p)).toFixed(1)+' ';
+      pCl+=(k?'L':'M')+x(t).toFixed(1)+' '+y(cloud(t,p)).toFixed(1)+' ';}
+    s+='<path class="a-on" d="'+pOn+'L'+x(Y)+' '+y(0)+' L'+x(0)+' '+y(0)+' Z"/>';
+    s+='<path class="l-cl" d="'+pCl+'"/>';
+    s+='<path class="l-on" d="'+pOn+'"/>';
+    if(be!==null){const bx=x(be), by=y(cloud(be,p));
+      s+='<line class="be-line" x1="'+bx+'" x2="'+bx+'" y1="'+by+'" y2="'+y(0)+'"/>';
+      s+='<circle class="be-dot" cx="'+bx+'" cy="'+by+'" r="6"/>';
+      const anchor=bx>W-140?'end':'start', dx=anchor==='end'?-12:12;
+      s+='<text class="be-txt" x="'+(bx+dx)+'" y="'+(by-10)+'" text-anchor="'+anchor+'">'+fmt(Math.round(be*10)/10)+' г. · '+fmt(Math.round(cloud(be,p)*10)/10)+' млн ₽</text>';}
+    $('chart').innerHTML=s;
+  }
+  ids.forEach(k=>$(k).addEventListener('input',calc));
+  calc();
+
+  const m=/^#s(\d+)$/.exec(location.hash||'');
+  go(m?parseInt(m[1],10)-1:0);
+})();
+</script>
+</body>
+</html>
